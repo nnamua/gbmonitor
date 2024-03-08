@@ -160,12 +160,12 @@ def ranged_int(min: int, max: int):
 
 def main():
     monitor = Monitor()
-    parser = argparse.ArgumentParser(description="Set monitor property.")
+    parser = argparse.ArgumentParser(description="Set properties of gigabyte monitors.")
 
     # Generate options from configurable properties
     for prop in monitor.configurable_properties.values():
         name = (f"-{prop.abbr}", f"--{prop.name}") if prop.abbr is not None else (f"--{prop.name}",)
-        parser.add_argument(*name, type=ranged_int(*prop.range))
+        parser.add_argument(*name, type=ranged_int(*prop.range), metavar=f"[{prop.range[0]}-{prop.range[1]}]")
     args = parser.parse_args()
 
     # Set property for each supplied argument
