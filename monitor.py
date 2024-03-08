@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
 import argparse
+import time
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Optional, Tuple
 
 import hid
 
@@ -16,6 +17,7 @@ class MonitorProperty:
     name: str
     value: int
     range: Tuple[int, int]
+    abbr: Optional[str] = None
     description: str = ""
 
 
@@ -32,33 +34,39 @@ class Monitor:
         return {
             "brightness": MonitorProperty(
                 name="brightness",
+                abbr="b",
                 range=tuple((0, 100)),
                 value=0x10,
             ),
             "contrast": MonitorProperty(
                 name="contrast",
+                abbr="c",
                 range=tuple((0, 100)),
                 value=0x12,
             ),
             "sharpness": MonitorProperty(
                 name="sharpness",
+                abbr="s",
                 range=tuple((0, 10)),
                 value=0x87,
             ),
             "low_blue_light": MonitorProperty(
                 name="low-blue-light",
+                abbr="lb",
                 range=tuple((0, 10)),
                 value=0xE00B,
                 description="Blue light reduction. 0 means no reduction.",
             ),
             "kvm_switch": MonitorProperty(
                 name="kvm-switch",
+                abbr="kvm",
                 range=tuple((0, 1)),
                 value=0xE069,
                 description="Switch KVM to device 0 or 1",
             ),
             "color_mode": MonitorProperty(
                 name="color-mode",
+                abbr="cm",
                 range=tuple((0, 3)),
                 value=0xE003,
                 description="0 is cool, 1 is normal, 2 is warm, 3 is user-defined.",
@@ -153,21 +161,20 @@ def ranged_int(min: int, max: int):
 def main():
     monitor = Monitor()
     parser = argparse.ArgumentParser(description="Set monitor property.")
-    parser.add_argument("-b", "--brightness", type=ranged_int(0, 100))
-    parser.add_argument("-c", "--contrast", type=ranged_int(0, 100))
-    parser.add_argument("-s", "--sharpness", type=ranged_int(0, 10))
-    parser.add_argument("-lb", "--low-blue-light", type=ranged_int(0, 10))
-    parser.add_argument("-k", "--kvm-switch", type=ranged_int(0, 1))
-    parser.add_argument("-cm", "--color-mode", type=ranged_int(0, 3))
-    parser.add_argument("--rgb-red", type=ranged_int(0, 100))
-    parser.add_argument("--rgb-green", type=ranged_int(0, 100))
-    parser.add_argument("--rgb-blue", type=ranged_int(0, 100))
+
+    # Generate options from configurable properties
+    for prop in monitor.configurable_properties.values():
+        name = (f"-{prop.abbr}", f"--{prop.name}") if prop.abbr is not None else (f"--{prop.name}",)
+        parser.add_argument(*name, type=ranged_int(*prop.range))
     args = parser.parse_args()
 
     # Set property for each supplied argument
     for name, value in vars(args).items():
         if value is not None:
             monitor.set_property(name, value)
+
+            # Some sort of delay was required in my setup, could maybe be tweaked
+            time.sleep(0.2)
 
 
 if __name__ == "__main__":
